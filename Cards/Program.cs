@@ -1,23 +1,75 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Cards
 {
     class Program
     {
+        private static string WindowsLeafsFileName = "WindowsLeaf.json";
+        private static string BackgroundColorsFileName = "BackgroundColors.json";
+        private static bool[,,] WindowsLeafs;
+        private static List<Color[,]> BackgroundColors;
+        private static JsonSerializerSettings DefaultJsonSerializerSettingz { get; set; }
+
         static void Main(string[] args)
         {
+            if (args != null && args.Length == 2)
+            {
+                if (args.Any(x => x.ToLower().Contains("window")) && args.Any(x => x.ToLower().Contains("color")))
+                {
+                    WindowsLeafsFileName = args.Where(x => x.ToLower().Contains("window")).FirstOrDefault();
+                    BackgroundColorsFileName = args.Where(x => x.ToLower().Contains("color")).FirstOrDefault();
+                }
+            }
+            if (!ReadInputSettings()) return;
+
+
+            var colors = JsonConvert.SerializeObject(BackgroundColors);
+            var blocks = JsonConvert.SerializeObject(WindowsLeafs);
             GetCards();
         }
 
+        private static bool ReadInputSettings()
+        {
+            try
+            {
+                if (!File.Exists(WindowsLeafsFileName))
+                {
+                    Console.WriteLine($"{WindowsLeafsFileName} is not exist. Program is aborted");
+                    return false;
+                }
+                if (!File.Exists(BackgroundColorsFileName))
+                {
+                    Console.WriteLine($"{BackgroundColorsFileName} is not exist. Program is aborted");
+                    return false;
+                }
+
+                var streamReader = new StreamReader(WindowsLeafsFileName);
+                var fileContent = streamReader.ReadToEnd();
+                WindowsLeafs = JsonConvert.DeserializeObject<bool[,,]>(fileContent);
+                streamReader.Close();
+
+                streamReader = new StreamReader(BackgroundColorsFileName);
+                fileContent = streamReader.ReadToEnd();
+                BackgroundColors = JsonConvert.DeserializeObject<List<Color[,]>>(fileContent);
+                streamReader.Close();
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"{e.Message}\n{e.StackTrace}");
+            }
+            Console.WriteLine("failed complete ReadInputSettings(). Program is aborted");
+            return false;
+        }
 
         private static void GetCards()
         {
             var cardBook = new CardBook();
-            var backgroundColors = GetBackgroundColors();
-            
-            foreach (var bcg in backgroundColors)
+            foreach (var bcg in BackgroundColors)
             {
                 var bl = new List<string>();
                 for (var i = 0; i < 3; i++)
@@ -25,24 +77,24 @@ namespace Cards
                     var cStr = "";
                     for (var j = 0; j < 3; j++)
                     {
-                        var bc = bcg[i,j];
+                        var bc = bcg[i, j];
                         cStr = cStr == "" ? bc.ToString() : cStr + "," + bc.ToString();
                     }
                     bl.Add(cStr);
                 }
                 cardBook.BackgroundColors.Add(bl);
             }
-            cardBook.CoverBlocks = BoolsToStrList(CoverBlocks); 
-            var cardList = GetDistinctHoles(CoverBlocks);  
-            var cardOrders = ArrangeCards(); 
+            cardBook.CoverBlocks = BoolsToStrList(WindowsLeafs);
+            var cardList = GetDistinctHoles(WindowsLeafs);
+            var cardOrders = ArrangeCards();
             var list3CardStat = new List<List<List<CardStat>>>();
-            foreach (var cardOrder in cardOrders)  
+            foreach (var cardOrder in cardOrders)
             {
                 var list2CardStat = new List<List<CardStat>>();
                 for (var i = 0; i < 4; i++)
                 {
                     var cardindex = cardOrder[i];
-                    var b = backgroundColors[i];
+                    var b = BackgroundColors[i];
                     var h = cardList[cardindex];
                     var list1CardStat = DistinctColorOfOneArea(i, cardindex, b, h);
                     list2CardStat.Add(list1CardStat);
@@ -52,9 +104,15 @@ namespace Cards
             cardBook.Cards = CardParser(list3CardStat);
             cardBook.Cards = cardBook.Cards.OrderBy(x => x.CardColors).ToList();
             cardBook.DistinctCards = cardBook.Cards.GroupBy(x => x.CardColors).OrderByDescending(x => x.Count()).ToDictionary(x => x.Key, x => x.Count());
-            var cardBookJson = JsonConvert.SerializeObject(cardBook);
+            var cardBookJson = JsonConvert.SerializeObject(cardBook, JsonSerializerSettingsIgnoingNulls);
+            Console.WriteLine($"found {cardBook.DistinctCards.Count} Distinct Cards\nTotal Cards count: {cardBook.Cards.Count}");
+            var fileOutput = $"CardsReport_{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.json";
+            var sw = new StreamWriter(fileOutput);
+            sw.Write(cardBookJson);
+            sw.Close();
+            Console.WriteLine($"Cards report written to {fileOutput}");
         }
- 
+
         private static List<Card4s> CardParser(List<List<List<CardStat>>> cccc)
         {
             var cardStatList = new List<Card4s>();
@@ -87,7 +145,7 @@ namespace Cards
                                     Cards = new List<CardStat> { a, b, c, d }
                                 };
                                 cardStatList.Add(cardStat);
-                                
+
                             }
                         }
                     }
@@ -95,9 +153,9 @@ namespace Cards
             }
             return cardStatList;
         }
- 
- 
-      
+
+
+
         /// <summary>
         /// get index on the window for each of 4 
         /// </summary>
@@ -130,26 +188,6 @@ namespace Cards
             return arraysInt;
         }
 
-        /// <summary>
-        /// get static background colors 
-        /// </summary>
-        /// <returns></returns>
-        private static List<Color[,]> GetBackgroundColors()
-        {
-            var list = new List<Color[,]>();
-            list.Add(new Color[,] { { Color.Yellow, Color.None, Color.Blue }, { Color.Red, Color.Green, Color.Red }, { Color.White, Color.Blue, Color.Yellow } });
-            list.Add(new Color[,] { { Color.Green, Color.None, Color.Blue }, { Color.None, Color.Red, Color.Yellow }, { Color.Blue, Color.White, Color.Green } });
-            list.Add(new Color[,] { { Color.White, Color.Yellow, Color.Red }, { Color.Green, Color.None, Color.Green }, { Color.Blue, Color.None, Color.White } });
-            list.Add(new Color[,] { { Color.None, Color.None, Color.None }, { Color.None, Color.White, Color.Blue }, { Color.Green, Color.Yellow, Color.Red } });
-            return list;
-        }
-
-        private static bool[,,] CoverBlocks = new bool[,,] {
-            { { false, true, true }, { false, false, false }, { true, false, false } },
-            { { false, true, false }, { false, false, false }, { false, true, false } },
-            { { false, false, false }, { false, true, false }, { false, true, false } },
-            { { true, false, false }, { false, false, false }, { false, true, false } }};
-
         private static List<string> BoolsToStrList(bool[,,] holes)
         {
             var retStrList = new List<string>();
@@ -179,12 +217,11 @@ namespace Cards
         private static List<CardStat> DistinctColorOfOneArea(int windowIndex, int cardIndex, Color[,] paintedColors, List<bool[,]> holesList)
         {
             var cardStatList = new List<CardStat>();
-            //var allLists = new Dictionary<string, List<Color>>();
             var listStr = new List<string>();
             for (int i = 0; i < holesList.Count; i++)
             {
                 var holes = holesList[i];
-              
+
                 var hl = new List<char>();
                 for (var p = 0; p < 3; p++)
                 {
@@ -333,6 +370,21 @@ namespace Cards
             }
             return rotetedHoles;
         }
+
+        public static JsonSerializerSettings JsonSerializerSettingsIgnoingNulls
+        {
+            get
+            {
+                DefaultJsonSerializerSettingz = new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    Formatting = Formatting.Indented,
+                    NullValueHandling = NullValueHandling.Ignore,
+                };
+                DefaultJsonSerializerSettingz.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+                return DefaultJsonSerializerSettingz;
+            }
+        }
     }
 
     public class CardBook
@@ -355,9 +407,10 @@ namespace Cards
         public int Card { get; set; }
         public int CardPosition { get; set; }
         public string CardHoles { get; set; }
-        public List<string> Colors  { get; set; }
+        public List<string> Colors { get; set; }
     }
 
+    [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
     public enum Color
     {
         Blue,

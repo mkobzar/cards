@@ -52,7 +52,13 @@
   <ItemGroup>
     <None Include="AllCardsOutput.json" />
     <None Include="App.config" />
+    <None Include="BackgroundColors.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
+    <None Include="WindowsLeaf.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="CardsOutput.txt" />
