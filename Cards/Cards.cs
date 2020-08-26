@@ -100,8 +100,20 @@ namespace Cards
                 list3CardStat.Add(list2CardStat);
             }
             cardBook.Cards = CardParser(list3CardStat);
-            cardBook.Cards = cardBook.Cards.OrderBy(x => x.CardColors).ToList();
-            cardBook.DistinctCards = cardBook.Cards.GroupBy(x => x.CardColors).OrderByDescending(x => x.Count()).ToDictionary(x => x.Key, x => x.Count());
+            cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
+            ulong previousLevel = 1;
+            ulong smartLevel = 0;
+            foreach (var card in cardBook.Cards)
+            {
+                var thisLevel = card.Level;
+                if (card.Level > previousLevel)
+                    card.Level = ++smartLevel;
+                else
+                    card.Level = smartLevel;
+                previousLevel = thisLevel;
+            }
+            cardBook.LevelCounters = cardBook.Cards.GroupBy(x => x.Level).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
+            cardBook.DistinctCards = cardBook.Cards.GroupBy(x => x.CardColors).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
             var cardBookJson = JsonConvert.SerializeObject(cardBook, JsonSerializerSettingsIgnoingNulls);
             Console.WriteLine($"found {cardBook.DistinctCards.Count} Distinct Cards\nTotal Cards count: {cardBook.Cards.Count}");
             var fileOutput = $"CardsReport_{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.json";
@@ -142,6 +154,7 @@ namespace Cards
                                     CardColors = x,
                                     Cards = new List<CardStat> { a, b, c, d }
                                 };
+                                cardStat.CaclulateLevel();
                                 cardStatList.Add(cardStat);
                             }
                         }
