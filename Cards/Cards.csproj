@@ -46,6 +46,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Card4s.cs" />
+    <Compile Include="CardBook.cs" />
+    <Compile Include="Cards.cs" />
+    <Compile Include="CardStat.cs" />
+    <Compile Include="Color.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
