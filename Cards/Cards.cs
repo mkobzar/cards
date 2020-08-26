@@ -103,19 +103,27 @@ namespace Cards
             cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
             ulong previousLevel = 1;
             ulong smartLevel = 0;
+            var id = 1;
             foreach (var card in cardBook.Cards)
             {
                 var thisLevel = card.Level;
                 if (card.Level > previousLevel)
+                {
+                    id = 1;
                     card.Level = ++smartLevel;
+                }
                 else
+                {
                     card.Level = smartLevel;
+                }
+                card.ID = $"{smartLevel}:{id++}";
                 previousLevel = thisLevel;
             }
             cardBook.LevelCounters = cardBook.Cards.GroupBy(x => x.Level).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
-            cardBook.DistinctCards = cardBook.Cards.GroupBy(x => x.CardColors).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
+
+            cardBook.DistinctCardsAndCounters = cardBook.Cards.GroupBy(x => x.CardColors).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
             var cardBookJson = JsonConvert.SerializeObject(cardBook, JsonSerializerSettingsIgnoingNulls);
-            Console.WriteLine($"found {cardBook.DistinctCards.Count} Distinct Cards\nTotal Cards count: {cardBook.Cards.Count}");
+            Console.WriteLine($"found {cardBook.DistinctCardsAndCounters.Count} Distinct Cards\nTotal Cards count: {cardBook.Cards.Count}");
             var fileOutput = $"CardsReport_{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.json";
             var sw = new StreamWriter(fileOutput);
             sw.Write(cardBookJson);
@@ -126,7 +134,6 @@ namespace Cards
         private List<Card4s> CardParser(List<List<List<CardStat>>> cccc)
         {
             var cardStatList = new List<Card4s>();
-            var id = 1;
             foreach (var ccc in cccc)
             {
                 var A = ccc[0];
@@ -150,7 +157,6 @@ namespace Cards
                                 var x = string.Join(",", y);
                                 var cardStat = new Card4s
                                 {
-                                    ID = id++,
                                     CardColors = x,
                                     Cards = new List<CardStat> { a, b, c, d }
                                 };
