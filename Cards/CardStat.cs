@@ -7,8 +7,8 @@ namespace Cards
         public int WindowID { get; set; }
         public int InsertBlockID { get; set; }
         public int InsertBlockPosition { get; set; }
-        public string InsertBlockHoles { get; set; }
-        public string ColorDotsOfThisWindow { get; set; }
+        public string InsertBlockPattern { get; set; }
+        public string OpenedColors { get; set; }
         public List<string> Colors { get; set; }
     }
 }

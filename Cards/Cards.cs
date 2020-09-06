@@ -13,6 +13,8 @@ namespace Cards
         private bool[,,] WindowsLeafs;
         private List<Color[,]> BackgroundColors;
         private JsonSerializerSettings DefaultJsonSerializerSettingz { get; set; }
+        private CardBook cardBook  { get; set; }
+        private List<Card4s> card4s { get; set; }
 
         /// <summary>
         /// Cards initialization
@@ -36,7 +38,7 @@ namespace Cards
         public void Run()
         {
             if (!ReadInputSettings()) return;
-            var cardBook = new CardBook
+            cardBook = new CardBook
             {
                 BackgroundColors = new List<List<string>>()
             };
@@ -73,11 +75,13 @@ namespace Cards
                 list3CardStat.Add(list2CardStat);
             }
             cardBook.Cards = CardParser(list3CardStat);
-            CardBookGroupAndOrder(cardBook);
-            CardBookPrint(cardBook);
+            CardBookGroupAndOrder();
+            CardBookPrint();
+            var c = card4s.FirstOrDefault(x => x.ID == 3);
+            var cs = cardBook.ColorGroups.SelectMany(x => x.VariationsOfSameColors.Where(y => y.ID == 12)).FirstOrDefault();
         }
 
-        private void CardBookPrint(object cardBook)
+        private void CardBookPrint()
         {
             var cardBookJson = JsonConvert.SerializeObject(cardBook, JsonSerializerSettingsIgnoingNulls);
             var fileOutput = $"CardsReport_{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.json";
@@ -97,7 +101,7 @@ namespace Cards
                 var variation = 1;
                 var cg = new CardGroups
                 {
-                    FindColors = g.Key,
+                    ColorCode = g.Key,
                     Level = g.Value.FirstOrDefault().Level
                 };
                 var card4List = new List<Card4>();
@@ -110,19 +114,19 @@ namespace Cards
                     };
                     card4List.Add(c4);
                 }
-                cg.GroupsOfPossibleVariationsForThisColorList = card4List;
+                cg.VariationsOfSameColors = card4List;
                 cardGroups.Add(cg);
             }
             cardGroups = cardGroups.OrderBy(x => x.Level).ToList();
             cardGroups.ForEach(x =>
             {
                 x.GroupID = groupId++;
-                x.GroupsOfPossibleVariationsForThisColorList.ForEach(y => y.ID = id++);
+                x.VariationsOfSameColors.ForEach(y => y.ID = id++);
             });
             return cardGroups;
         }
 
-        private void CardBookGroupAndOrder(CardBook cardBook)
+        private void CardBookGroupAndOrder()
         {
             cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
             ulong previousLevel = 1;
@@ -133,11 +137,11 @@ namespace Cards
             foreach (var card in cardBook.Cards)
             {
                 var thisLevel = card.Level;
-                var thisColor = card.CardColors;
-                if (!string.Equals(card.CardColors, previousColor))
+                var thisColor = card.ColorCode;
+                if (!string.Equals(card.ColorCode, previousColor))
                 {
                     previousVariation = 1;
-                    previousColor = card.CardColors;
+                    previousColor = card.ColorCode;
                 }
                 else
                 {
@@ -146,7 +150,7 @@ namespace Cards
                 card.Variation = previousVariation;
                 if (card.Level > previousLevel)
                 {
-                    id = 1;
+                   // id = 1;
                     card.Level = ++smartLevel;
                 }
                 else
@@ -157,12 +161,28 @@ namespace Cards
                 previousLevel = thisLevel;
             }
             cardBook.LevelCounters = cardBook.Cards.GroupBy(x => x.Level).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
-            cardBook.DistinctColorGroupssAndCounters = cardBook.Cards.GroupBy(x => x.CardColors).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
+            cardBook.DistinctColorGroupssAndCounters = cardBook.Cards.GroupBy(x => x.ColorCode).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
             cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
             cardBook.ColorGroups = new List<CardGroups>();
-            cardBook.Cards = cardBook.Cards.OrderBy(x => x.CardColors).ToList();
-            var gg = cardBook.Cards.GroupBy(x => x.CardColors).ToDictionary(x => x.Key, x => x.ToList());
+            cardBook.Cards = cardBook.Cards.OrderBy(x => x.ColorCode).ToList();
+            var gg = cardBook.Cards.GroupBy(x => x.ColorCode).ToDictionary(x => x.Key, x => x.ToList());
             cardBook.ColorGroups = CardsToGroups(gg);
+            card4s = new List<Card4s>();
+            foreach (var cg in cardBook.ColorGroups)
+            {
+                foreach (var c in cg.VariationsOfSameColors)
+                {
+                    card4s.Add(new Card4s
+                    {
+                        ID = c.ID,
+                        ColorCode = cg.ColorCode,
+                        GroupID = cg.GroupID,
+                        Level = cg.Level,
+                        Variation = c.Variation,
+                        Windows = c.Windows
+                    });
+                }
+            }
             cardBook.Cards = null;
         }
 
@@ -267,7 +287,7 @@ namespace Cards
                                 var x = string.Join(",", y);
                                 var cardStat = new Card4s
                                 {
-                                    CardColors = x,
+                                    ColorCode = x,
                                     Windows = new List<CardStat> { a, b, c, d },
                                     ID = id++
                                 };
@@ -281,7 +301,7 @@ namespace Cards
                 {
                     foreach (var c in cc)
                     {
-                        c.ColorDotsOfThisWindow = string.Join(", ", c.Colors);
+                        c.OpenedColors = string.Join(", ", c.Colors);
                         c.Colors = null;
                     }
                 }
@@ -367,7 +387,7 @@ namespace Cards
                     {
                         WindowID = windowIndex + 1,
                         InsertBlockID = cardIndex + 1,
-                        InsertBlockHoles = holesStr,
+                        InsertBlockPattern = holesStr,
                         InsertBlockPosition = i + 1,
                         Colors = colorList,
                     };

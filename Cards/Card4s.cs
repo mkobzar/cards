@@ -10,12 +10,13 @@ namespace Cards
         public int ID { get; set; }
         public ulong Level { get; set;  }
         public int Variation { get; set; }
-        public string CardColors { get; set; }
+        public string ColorCode { get; set; }
         public List<CardStat> Windows { get; set; }
+        public int GroupID { get; set; }
         public void CaclulateLevel()
         {
-            if (string.IsNullOrEmpty(CardColors)) return;
-            var colors = CardColors.Split(',');
+            if (string.IsNullOrEmpty(ColorCode)) return;
+            var colors = ColorCode.Split(',');
             var colorsGrouped = colors.GroupBy(x => x).ToDictionary(x => x.Key, x => x.Count());
             var colorCount = colors.Distinct().Count();
             double level = 1;  
@@ -27,14 +28,13 @@ namespace Cards
         }
     }
 
-   
 
     public class CardGroups
     {
         public int GroupID { get; set; }
         public ulong Level { get; set; }
-        public string FindColors { get; set; }
-        public List<Card4> GroupsOfPossibleVariationsForThisColorList { get; set; }
+        public string ColorCode { get; set; }
+        public List<Card4> VariationsOfSameColors { get; set; }
     }
 
 

@@ -55,7 +55,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="AllCardsOutput.json" />
+    <None Include="Output.json" />
     <None Include="App.config" />
     <None Include="BackgroundColors.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -64,9 +64,6 @@
     <None Include="WindowsLeaf.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="CardsOutput.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
