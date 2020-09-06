@@ -4,10 +4,11 @@ namespace Cards
 {
     public class CardBook
     {
-        public List<string> CoverBlocks = new List<string>();
-        public List<List<string>> BackgroundColors = new List<List<string>>();
+        public List<CardGroups> ColorGroups { get; set; }
+        public Dictionary<int, string> InsertBlocks { get; set; }
+        public List<List<string>> BackgroundColors { get; set; }
         public Dictionary<ulong, int> LevelCounters { get; set; }
         public List<Card4s> Cards { get; set; }
-        public Dictionary<string, int> DistinctCardsAndCounters { get; set; }
+        public Dictionary<string, int> DistinctColorGroupssAndCounters { get; set; }
     }
 }
