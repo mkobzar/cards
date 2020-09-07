@@ -8,28 +8,26 @@ namespace Cards
 {
     public class Cards
     {
-        private string WindowsLeafsFileName = "WindowsLeaf.json";
-        private string BackgroundColorsFileName = "BackgroundColors.json";
-        private bool[,,] WindowsLeafs;
-        private List<Color[,]> BackgroundColors;
-        private JsonSerializerSettings DefaultJsonSerializerSettingz { get; set; }
-        private CardBook cardBook  { get; set; }
-        private List<Card4s> card4s { get; set; }
+        private readonly string _windowsLeafsFileName = "WindowsLeaf.json";
+        private readonly string _backgroundColorsFileName = "BackgroundColors.json";
+        private bool[,,] _windowsLeafs;
+        private List<Color[,]> _backgroundColors;
+        private JsonSerializerSettings DefaultJsonSerializerSettings { get; set; }
+        private CardBook CardBook { get; set; }
+
+        // ReSharper disable once CollectionNeverQueried.Local
+        private List<Card4s> Card4S { get; set; }
 
         /// <summary>
         /// Cards initialization
         /// </summary>
         /// <param name="args"></param>
-        public Cards(string[] args)
+        public Cards(IReadOnlyCollection<string> args)
         {
-            if (args != null && args.Length == 2)
-            {
-                if (args.Any(x => x.ToLower().Contains("window")) && args.Any(x => x.ToLower().Contains("color")))
-                {
-                    WindowsLeafsFileName = args.Where(x => x.ToLower().Contains("window")).FirstOrDefault();
-                    BackgroundColorsFileName = args.Where(x => x.ToLower().Contains("color")).FirstOrDefault();
-                }
-            }
+            if (args == null || args.Count != 2) return;
+            if (!args.Any(x => x.ToLower().Contains("window")) || !args.Any(x => x.ToLower().Contains("color"))) return;
+            _windowsLeafsFileName = args.FirstOrDefault(x => x.ToLower().Contains("window"));
+            _backgroundColorsFileName = args.FirstOrDefault(x => x.ToLower().Contains("color"));
         }
 
         /// <summary>
@@ -38,11 +36,11 @@ namespace Cards
         public void Run()
         {
             if (!ReadInputSettings()) return;
-            cardBook = new CardBook
+            CardBook = new CardBook
             {
                 BackgroundColors = new List<List<string>>()
             };
-            foreach (var bcg in BackgroundColors)
+            foreach (var bcg in _backgroundColors)
             {
                 var bl = new List<string>();
                 for (var i = 0; i < 3; i++)
@@ -53,12 +51,15 @@ namespace Cards
                         var bc = bcg[i, j];
                         cStr = cStr == "" ? bc.ToString() : cStr + "," + bc.ToString();
                     }
+
                     bl.Add(cStr);
                 }
-                cardBook.BackgroundColors.Add(bl);
+
+                CardBook.BackgroundColors.Add(bl);
             }
-            cardBook.InsertBlocks = BoolsToStrList(WindowsLeafs);
-            var cardList = GetDistinctHoles(WindowsLeafs);
+
+            CardBook.InsertBlocks = BoolsToStrList(_windowsLeafs);
+            var cardList = GetDistinctHoles(_windowsLeafs);
             var cardOrders = ArrangeCards();
             var list3CardStat = new List<List<List<CardStat>>>();
             foreach (var cardOrder in cardOrders)
@@ -66,24 +67,26 @@ namespace Cards
                 var list2CardStat = new List<List<CardStat>>();
                 for (var i = 0; i < 4; i++)
                 {
-                    var cardindex = cardOrder[i];
-                    var b = BackgroundColors[i];
-                    var h = cardList[cardindex];
-                    var list1CardStat = DistinctColorOfOneArea(i, cardindex, b, h);
+                    var cardIndex = cardOrder[i];
+                    var b = _backgroundColors[i];
+                    var h = cardList[cardIndex];
+                    var list1CardStat = DistinctColorOfOneArea(i, cardIndex, b, h);
                     list2CardStat.Add(list1CardStat);
                 }
+
                 list3CardStat.Add(list2CardStat);
             }
-            cardBook.Cards = CardParser(list3CardStat);
+
+            CardBook.Cards = CardParser(list3CardStat);
             CardBookGroupAndOrder();
             CardBookPrint();
-            var c = card4s.FirstOrDefault(x => x.ID == 3);
-            var cs = cardBook.ColorGroups.SelectMany(x => x.VariationsOfSameColors.Where(y => y.ID == 12)).FirstOrDefault();
+            //var c = Card4S.FirstOrDefault(x => x.ID == 3);
+            //var cs = CardBook.ColorGroups.SelectMany(x => x.VariationsOfSameColors.Where(y => y.ID == 12)).FirstOrDefault();
         }
 
         private void CardBookPrint()
         {
-            var cardBookJson = JsonConvert.SerializeObject(cardBook, JsonSerializerSettingsIgnoingNulls);
+            var cardBookJson = JsonConvert.SerializeObject(CardBook, JsonSerializerSettingsIgnoringNulls);
             var fileOutput = $"CardsReport_{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.json";
             var sw = new StreamWriter(fileOutput);
             sw.Write(cardBookJson);
@@ -91,7 +94,7 @@ namespace Cards
             Console.WriteLine($"Cards report written to {fileOutput}");
         }
 
-        private List<CardGroups> CardsToGroups(Dictionary<string, List<Card4s>> gg)
+        private static List<CardGroups> CardsToGroups(Dictionary<string, List<Card4s>> gg)
         {
             var cardGroups = new List<CardGroups>();
             var groupId = 1;
@@ -102,21 +105,18 @@ namespace Cards
                 var cg = new CardGroups
                 {
                     ColorCode = g.Key,
+                    // ReSharper disable once PossibleNullReferenceException
                     Level = g.Value.FirstOrDefault().Level
                 };
-                var card4List = new List<Card4>();
-                foreach (var c in g.Value)
+                var card4List = g.Value.Select(c => new Card4
                 {
-                    var c4 = new Card4
-                    {
-                        Windows = c.Windows,
-                        Variation = variation++
-                    };
-                    card4List.Add(c4);
-                }
+                    Windows = c.Windows,
+                    Variation = variation++
+                }).ToList();
                 cg.VariationsOfSameColors = card4List;
                 cardGroups.Add(cg);
             }
+
             cardGroups = cardGroups.OrderBy(x => x.Level).ToList();
             cardGroups.ForEach(x =>
             {
@@ -128,16 +128,14 @@ namespace Cards
 
         private void CardBookGroupAndOrder()
         {
-            cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
+            CardBook.Cards = CardBook.Cards.OrderBy(x => x.Level).ToList();
             ulong previousLevel = 1;
             var previousVariation = 0;
             var previousColor = "";
             ulong smartLevel = 0;
-            var id = 1;
-            foreach (var card in cardBook.Cards)
+            foreach (var card in CardBook.Cards)
             {
                 var thisLevel = card.Level;
-                var thisColor = card.ColorCode;
                 if (!string.Equals(card.ColorCode, previousColor))
                 {
                     previousVariation = 1;
@@ -147,32 +145,37 @@ namespace Cards
                 {
                     previousVariation++;
                 }
+
                 card.Variation = previousVariation;
                 if (card.Level > previousLevel)
                 {
-                   // id = 1;
+                    // id = 1;
                     card.Level = ++smartLevel;
                 }
                 else
                 {
                     card.Level = smartLevel;
                 }
+
                 // card.ID = $"{card.ID}:{id++}:{card.Variation}";
                 previousLevel = thisLevel;
             }
-            cardBook.LevelCounters = cardBook.Cards.GroupBy(x => x.Level).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
-            cardBook.DistinctColorGroupssAndCounters = cardBook.Cards.GroupBy(x => x.ColorCode).OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Count());
-            cardBook.Cards = cardBook.Cards.OrderBy(x => x.Level).ToList();
-            cardBook.ColorGroups = new List<CardGroups>();
-            cardBook.Cards = cardBook.Cards.OrderBy(x => x.ColorCode).ToList();
-            var gg = cardBook.Cards.GroupBy(x => x.ColorCode).ToDictionary(x => x.Key, x => x.ToList());
-            cardBook.ColorGroups = CardsToGroups(gg);
-            card4s = new List<Card4s>();
-            foreach (var cg in cardBook.ColorGroups)
+
+            CardBook.LevelCounters = CardBook.Cards.GroupBy(x => x.Level).OrderBy(x => x.Key)
+                .ToDictionary(x => x.Key, x => x.Count());
+            CardBook.DistinctColorGroupssAndCounters = CardBook.Cards.GroupBy(x => x.ColorCode).OrderBy(x => x.Key)
+                .ToDictionary(x => x.Key, x => x.Count());
+            CardBook.Cards = CardBook.Cards.OrderBy(x => x.Level).ToList();
+            CardBook.ColorGroups = new List<CardGroups>();
+            CardBook.Cards = CardBook.Cards.OrderBy(x => x.ColorCode).ToList();
+            var gg = CardBook.Cards.GroupBy(x => x.ColorCode).ToDictionary(x => x.Key, x => x.ToList());
+            CardBook.ColorGroups = CardsToGroups(gg);
+            Card4S = new List<Card4s>();
+            foreach (var cg in CardBook.ColorGroups)
             {
                 foreach (var c in cg.VariationsOfSameColors)
                 {
-                    card4s.Add(new Card4s
+                    Card4S.Add(new Card4s
                     {
                         ID = c.ID,
                         ColorCode = cg.ColorCode,
@@ -183,7 +186,8 @@ namespace Cards
                     });
                 }
             }
-            cardBook.Cards = null;
+
+            CardBook.Cards = null;
         }
 
         /// <summary>
@@ -194,25 +198,26 @@ namespace Cards
         {
             try
             {
-                if (!File.Exists(WindowsLeafsFileName))
+                if (!File.Exists(_windowsLeafsFileName))
                 {
-                    Console.WriteLine($"{WindowsLeafsFileName} is not exist. Program is aborted");
-                    return false;
-                }
-                if (!File.Exists(BackgroundColorsFileName))
-                {
-                    Console.WriteLine($"{BackgroundColorsFileName} is not exist. Program is aborted");
+                    Console.WriteLine($"{_windowsLeafsFileName} is not exist. Program is aborted");
                     return false;
                 }
 
-                var streamReader = new StreamReader(WindowsLeafsFileName);
+                if (!File.Exists(_backgroundColorsFileName))
+                {
+                    Console.WriteLine($"{_backgroundColorsFileName} is not exist. Program is aborted");
+                    return false;
+                }
+
+                var streamReader = new StreamReader(_windowsLeafsFileName);
                 var fileContent = streamReader.ReadToEnd();
-                WindowsLeafs = JsonConvert.DeserializeObject<bool[,,]>(fileContent);
+                _windowsLeafs = JsonConvert.DeserializeObject<bool[,,]>(fileContent);
                 streamReader.Close();
 
-                streamReader = new StreamReader(BackgroundColorsFileName);
+                streamReader = new StreamReader(_backgroundColorsFileName);
                 fileContent = streamReader.ReadToEnd();
-                BackgroundColors = JsonConvert.DeserializeObject<List<Color[,]>>(fileContent);
+                _backgroundColors = JsonConvert.DeserializeObject<List<Color[,]>>(fileContent);
                 streamReader.Close();
                 return true;
             }
@@ -220,6 +225,7 @@ namespace Cards
             {
                 Console.WriteLine($"{e.Message}\n{e.StackTrace}");
             }
+
             Console.WriteLine("failed complete ReadInputSettings(). Program is aborted");
             return false;
         }
@@ -229,7 +235,7 @@ namespace Cards
         /// </summary>
         /// <param name="holes"></param>
         /// <returns></returns>
-        private Dictionary<int, string> BoolsToStrList(bool[,,] holes)
+        private static Dictionary<int, string> BoolsToStrList(bool[,,] holes)
         {
             var retStrList = new Dictionary<int, string>();
 
@@ -246,11 +252,14 @@ namespace Cards
                         else
                             hl.Add('X');
                     }
+
                     if (p < 2)
                         hl.Add(' ');
                 }
+
                 retStrList.Add(t + 1, string.Join("", hl));
             }
+
             return retStrList;
         }
 
@@ -260,16 +269,18 @@ namespace Cards
         /// </summary>
         /// <param name="cccc"></param>
         /// <returns></returns>
-        private List<Card4s> CardParser(List<List<List<CardStat>>> cccc)
+        private static List<Card4s> CardParser(IEnumerable<List<List<CardStat>>> cccc)
         {
             var id = 1;
             var cardStatList = new List<Card4s>();
             foreach (var ccc in cccc)
             {
+                // ReSharper disable InconsistentNaming
                 var A = ccc[0];
                 var B = ccc[1];
                 var C = ccc[2];
                 var D = ccc[3];
+                // ReSharper restore InconsistentNaming
                 foreach (var a in A)
                 {
                     foreach (var b in B)
@@ -288,7 +299,7 @@ namespace Cards
                                 var cardStat = new Card4s
                                 {
                                     ColorCode = x,
-                                    Windows = new List<CardStat> { a, b, c, d },
+                                    Windows = new List<CardStat> {a, b, c, d},
                                     ID = id++
                                 };
                                 cardStat.CaclulateLevel();
@@ -297,15 +308,14 @@ namespace Cards
                         }
                     }
                 }
-                foreach (var cc in ccc)
+
+                foreach (var c in ccc.SelectMany(cc => cc))
                 {
-                    foreach (var c in cc)
-                    {
-                        c.OpenedColors = string.Join(", ", c.Colors);
-                        c.Colors = null;
-                    }
+                    c.OpenedColors = string.Join(", ", c.Colors);
+                    c.Colors = null;
                 }
             }
+
             return cardStatList;
         }
 
@@ -314,7 +324,7 @@ namespace Cards
         /// get index on the window for each of 4 
         /// </summary>
         /// <returns></returns>
-        private List<int[]> ArrangeCards()
+        private static IEnumerable<int[]> ArrangeCards()
         {
             var arrays = new List<string>();
             var arraysInt = new List<int[]>();
@@ -330,24 +340,24 @@ namespace Cards
                         {
                             if (a == d || b == d || c == d) continue;
                             var s = $"{a}{b}{c}{d}";
-                            if (!arrays.Contains(s))
-                            {
-                                arraysInt.Add(new[] { a, b, c, d });
-                                arrays.Add(s);
-                            }
+                            if (arrays.Contains(s)) continue;
+                            arraysInt.Add(new[] {a, b, c, d});
+                            arrays.Add(s);
                         }
                     }
                 }
             }
+
             return arraysInt;
         }
 
 
-        private List<CardStat> DistinctColorOfOneArea(int windowIndex, int cardIndex, Color[,] paintedColors, List<bool[,]> holesList)
+        private static List<CardStat> DistinctColorOfOneArea(int windowIndex, int cardIndex, Color[,] paintedColors,
+            IReadOnlyList<bool[,]> holesList)
         {
             var cardStatList = new List<CardStat>();
             var listStr = new List<string>();
-            for (int i = 0; i < holesList.Count; i++)
+            for (var i = 0; i < holesList.Count; i++)
             {
                 var holes = holesList[i];
 
@@ -357,11 +367,9 @@ namespace Cards
                     for (var r = 0; r < 3; r++)
                     {
                         var b = holes[p, r];
-                        if (b)
-                            hl.Add('O');
-                        else
-                            hl.Add('X');
+                        hl.Add(b ? 'O' : 'X');
                     }
+
                     if (p < 2)
                         hl.Add(' ');
                 }
@@ -378,22 +386,22 @@ namespace Cards
                         }
                     }
                 }
+
                 colorList.Sort();
                 var str = string.Join(",", colorList);
-                if (!listStr.Contains(str))
+                if (listStr.Contains(str)) continue;
+                listStr.Add(str);
+                var cardStat = new CardStat
                 {
-                    listStr.Add(str);
-                    var cardStat = new CardStat
-                    {
-                        WindowID = windowIndex + 1,
-                        InsertBlockID = cardIndex + 1,
-                        InsertBlockPattern = holesStr,
-                        InsertBlockPosition = i + 1,
-                        Colors = colorList,
-                    };
-                    cardStatList.Add(cardStat);
-                }
+                    WindowID = windowIndex + 1,
+                    InsertBlockID = cardIndex + 1,
+                    InsertBlockPattern = holesStr,
+                    InsertBlockPosition = i + 1,
+                    Colors = colorList,
+                };
+                cardStatList.Add(cardStat);
             }
+
             return cardStatList;
         }
 
@@ -406,7 +414,12 @@ namespace Cards
             var holes = new List<List<bool[,]>>();
             for (var i = 0; i < 4; i++)
             {
-                var v = GenerateHoles(new bool[3, 3] { { blocks[i, 0, 0], blocks[i, 0, 1], blocks[i, 0, 2] }, { blocks[i, 1, 0], blocks[i, 1, 1], blocks[i, 1, 2] }, { blocks[i, 2, 0], blocks[i, 2, 1], blocks[i, 2, 2] } });
+                var v = GenerateHoles(new[,]
+                {
+                    {blocks[i, 0, 0], blocks[i, 0, 1], blocks[i, 0, 2]},
+                    {blocks[i, 1, 0], blocks[i, 1, 1], blocks[i, 1, 2]},
+                    {blocks[i, 2, 0], blocks[i, 2, 1], blocks[i, 2, 2]}
+                });
                 holes.Add(v);
             }
 
@@ -420,8 +433,8 @@ namespace Cards
         /// <returns></returns>
         private List<bool[,]> GenerateHoles(bool[,] window)
         {
-            var bools = new bool[] { true, false };
-            var distinctHoles = new List<bool[,]> { window };
+            var bools = new[] {true, false};
+            var distinctHoles = new List<bool[,]> {window};
             foreach (var b in bools)
             {
                 for (var i = 0; i <= 3; i++)
@@ -429,6 +442,7 @@ namespace Cards
                     AddDistinctHoles(distinctHoles, HolesRotate(window, i, b));
                 }
             }
+
             return distinctHoles;
         }
 
@@ -437,20 +451,17 @@ namespace Cards
         /// </summary>
         /// <param name="holesList"></param>
         /// <param name="newHoles"></param>
-        private void AddDistinctHoles(List<bool[,]> holesList, bool[,] newHoles)
+        private void AddDistinctHoles(ICollection<bool[,]> holesList, bool[,] newHoles)
         {
-            foreach (var h in holesList)
+            if (holesList.Select(h => HolesAreSame(h, newHoles)).Any(same => same))
             {
-                var same = HolesAreSame(h, newHoles);
-                if (same)
-                {
-                    return;
-                }
+                return;
             }
+
             holesList.Add(newHoles);
         }
 
-        private bool[,] CopyHoles(bool[,] holes, bool flip)
+        private static bool[,] CopyHoles(bool[,] holes, bool flip)
         {
             var newHoles = new bool[3, 3];
             for (var r = 0; r < 3; r++)
@@ -463,10 +474,11 @@ namespace Cards
                         newHoles[r, c] = holes[r, c];
                 }
             }
+
             return newHoles;
         }
 
-        private bool HolesAreSame(bool[,] holes1, bool[,] holes2)
+        private static bool HolesAreSame(bool[,] holes1, bool[,] holes2)
         {
             for (var r = 0; r < 3; r++) // r = row
             {
@@ -476,10 +488,11 @@ namespace Cards
                         return false;
                 }
             }
+
             return true;
         }
 
-        private bool[,] HolesRotate(bool[,] holes, int rotateCount, bool flip)
+        private static bool[,] HolesRotate(bool[,] holes, int rotateCount, bool flip)
         {
             var rotetedHoles = new bool[3, 3];
             var copiedHoles = CopyHoles(holes, flip);
@@ -492,25 +505,26 @@ namespace Cards
                         rotetedHoles[y, x] = copiedHoles[x, 2 - y];
                     }
                 }
+
                 copiedHoles = CopyHoles(rotetedHoles, false);
             }
+
             return rotetedHoles;
         }
 
-        private JsonSerializerSettings JsonSerializerSettingsIgnoingNulls
+        private JsonSerializerSettings JsonSerializerSettingsIgnoringNulls
         {
             get
             {
-                DefaultJsonSerializerSettingz = new JsonSerializerSettings
+                DefaultJsonSerializerSettings = new JsonSerializerSettings
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     Formatting = Formatting.Indented,
                     NullValueHandling = NullValueHandling.Ignore,
                 };
-                DefaultJsonSerializerSettingz.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
-                return DefaultJsonSerializerSettingz;
+                DefaultJsonSerializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+                return DefaultJsonSerializerSettings;
             }
         }
-
     }
 }
