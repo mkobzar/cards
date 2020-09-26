@@ -3,12 +3,12 @@
 namespace Cards
 {
     [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum Color
+    public enum Kolor
     {
         Blue,
         Green,
         Red,
-        White,
+        Black,
         Yellow,
         None
     }

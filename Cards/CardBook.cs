@@ -6,7 +6,7 @@ namespace Cards
     {
         public List<CardGroups> ColorGroups { get; set; }
         public Dictionary<int, string> InsertBlocks { get; set; }
-        public List<List<string>> BackgroundColors { get; set; }
+        public Kolor[][][] BackgroundColors { get; set; }
         public Dictionary<ulong, int> LevelCounters { get; set; }
         public List<Card4s> Cards { get; set; }
         public Dictionary<string, int> DistinctColorGroupssAndCounters { get; set; }
