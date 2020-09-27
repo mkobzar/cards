@@ -2,21 +2,21 @@
   [
     [ "Yellow", "None", "Blue" ],
     [ "Red", "Green", "Red" ],
-    [ "Black", "Blue", "Yellow" ]
+    [ "White", "Blue", "Yellow" ]
   ],
   [
     [ "Green", "None", "Blue" ],
     [ "None", "Red", "Yellow" ],
-    [ "Blue", "Black", "Green" ]
+    [ "Blue", "White", "Green" ]
   ],
   [
-    [ "Black", "Yellow", "Red" ],
+    [ "White", "Yellow", "Red" ],
     [ "Green", "None", "Green" ],
-    [ "Blue", "None", "Black" ]
+    [ "Blue", "None", "White" ]
   ],
   [
     [ "None", "None", "None" ],
-    [ "None", "Black", "Blue" ],
+    [ "None", "White", "Blue" ],
     [ "Green", "Yellow", "Red" ]
   ]
 ]
@@ -26,21 +26,21 @@
 //  [
 //    "Yellow,None,Blue",
 //    "Red,Green,Red",
-//    "Black,Blue,Yellow"
+//    "White,Blue,Yellow"
 //  ],
 //  [
 //    "Green,None,Blue",
 //    "None,Red,Yellow",
-//    "Blue,Black,Green"
+//    "Blue,White,Green"
 //  ],
 //  [
-//    "Black,Yellow,Red",
+//    "White,Yellow,Red",
 //    "Green,None,Green",
-//    "Blue,None,Black"
+//    "Blue,None,White"
 //  ],
 //  [
 //    "None,None,None",
-//    "None,Black,Blue",
+//    "None,White,Blue",
 //    "Green,Yellow,Red"
 //  ]
 //]

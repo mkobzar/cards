@@ -8,7 +8,7 @@ namespace Cards
         Blue,
         Green,
         Red,
-        Black,
+        White,
         Yellow,
         None
     }

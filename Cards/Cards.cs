@@ -18,9 +18,23 @@ namespace Cards
         private CardBook CardBook { get; set; }
         private Dictionary<int, bool[,]> Locations = new Dictionary<int, bool[,]>();
         Font MyFont = new Font("Microsoft Sans Serif", 11);
-
+        private int Dia = 36;
+        private int Width = 256;
+        private int Height = 157;
+        Rectangle[] Rectangles = new Rectangle[20];
         // ReSharper disable once CollectionNeverQueried.Local
         private List<Card4s> Card4S { get; set; }
+
+        private void Tocsv()
+        {
+            //var fo = $"{args[0]}.csv";
+            //using (var writer = new StreamWriter(fo))
+            //using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            //{
+            //    csv.WriteRecords(oo);
+            //}
+            //Console.WriteLine($"{fo} is saved");
+        }
 
         /// <summary>
         /// Cards initialization
@@ -34,6 +48,7 @@ namespace Cards
             _backgroundColorsFileName = args.FirstOrDefault(x => x.ToLower().Contains("color"));
         }
 
+       
         /// <summary>
         /// Cards execution
         /// </summary>
@@ -72,10 +87,18 @@ namespace Cards
         }
 
       
-
         private void PopLocations()
         {
-            for (var count = 1; count < 10; count++)
+            var j = 0;
+            for (var r = 0; r < 5; r++)
+            {
+                for (var c = 0; c < 4; c++)
+                {
+                    Rectangles[j++] = new Rectangle(c * Width, r * Height, Width, Height);
+                }
+            }
+
+            for (var count = 0; count < 10; count++)
             {
                 var bb = new bool[,]
                 {
@@ -83,7 +106,7 @@ namespace Cards
                 { false, false, false },
                 { false, false, false }
                 };
-                for (var i = 0; i < count-1; i++)
+                for (var i = 0; i < count; i++)
                 {
                     if (i == 0)
                         bb[0, 0] = true;
@@ -108,12 +131,11 @@ namespace Cards
             }
         }
 
-        void DrawImageCards(CardDescription cardDescription)
+        Bitmap GetBitmap(CardDescription cardDescription)
         {
             var cc = cardDescription.ColorList.Split(',').Select(x => Color.FromName(x)).ToList();
-            var dia = 36;
-            var bmp = new Bitmap(250, 160, PixelFormat.Format24bppRgb);
-            Graphics g = Graphics.FromImage(bmp);
+            var bmp = new Bitmap(Width, Height, PixelFormat.Format24bppRgb);
+            var g = Graphics.FromImage(bmp);
             g.Clear(Color.White);
             var c = 0;
             double multiplierX = 2;
@@ -124,20 +146,21 @@ namespace Cards
                 {
                     if (Locations[cc.Count][i, j])
                     {
-                        var offsetX = (int)((i + 1) * dia * multiplierX - dia);
-                        var offsetY = (int)((j + 1) * dia * multiplierY - dia);
+                        var offsetX = (int)((i + 1) * Dia * multiplierX - Dia);
+                        var offsetY = (int)((j + 1) * Dia * multiplierY - Dia);
+                        var p = new Pen(Color.Black);
                         var sb = new SolidBrush(cc[c++]);
-                        g.FillEllipse(sb, offsetX, offsetY, dia, dia);
+                        g.FillEllipse(sb, offsetX, offsetY, Dia, Dia);
+                        g.DrawEllipse(p, offsetX, offsetY, Dia, Dia);
                     }
                 }
             }
             var brr = new SolidBrush(Color.Black);
             var text = $"ID:{cardDescription.Id}, Level:{cardDescription.Level}, Variations:{cardDescription.Variations}";
-            g.DrawString(text, MyFont, brr, 5, 134);
-            bmp.Save($@"{cardDescription.Id.ToString("D" + 4)}.png");
+            g.DrawString(text, MyFont, brr, 25, 130);
+            return bmp;
         }
-
-
+ 
         private void CardBookPrint()
         {
             var cardBookJson = JsonConvert.SerializeObject(CardBook, JsonSerializerSettingsIgnoringNulls);
@@ -224,8 +247,13 @@ namespace Cards
             var gg = CardBook.Cards.GroupBy(x => x.ColorCode).ToDictionary(x => x.Key, x => x.ToList());
             CardBook.ColorGroups = CardsToGroups(gg);
             Card4S = new List<Card4s>();
+
+            var images = new List<Bitmap>();
+            var fromm = 1;
+            var too = 0;
             foreach (var cg in CardBook.ColorGroups)
             {
+                too++;
                 var cardDescription = new CardDescription()
                 {
                     ColorList = cg.ColorCode,
@@ -233,7 +261,13 @@ namespace Cards
                     Level = cg.Level,
                     Variations = cg.VariationsOfSameColors.Count
                 };
-                DrawImageCards(cardDescription);
+                images.Add(GetBitmap(cardDescription));
+                if (images.Count >= 20)
+                {
+                    SaveImages(images, $"{fromm}_to_{too}");
+                    fromm = too + 1;
+                    images = new List<Bitmap>();
+                }
                 foreach (var c in cg.VariationsOfSameColors)
                 {
                     Card4S.Add(new Card4s
@@ -247,28 +281,33 @@ namespace Cards
                     });
                 }
             }
-            var dictinctColorListForTest = new List<string>();
-            var prevColorList = "";
-            var id = 1;
-            foreach (var card in CardBook.Cards)
+            if (images.Count > 0)
             {
-                if (card.ColorCode == prevColorList)
-                    continue;
-                if (dictinctColorListForTest.Contains(card.ColorCode))
-                {
-                    Console.WriteLine("unexpected ColorCode");
-                }
-                dictinctColorListForTest.Add(card.ColorCode);
-                var cardDescription = new CardDescription()
-                {
-                    ColorList = card.ColorCode,
-                    Id = id++,
-                    Level = card.Level
-                };
-
+                SaveImages(images, $"{fromm}_to_{too}");
             }
-            //CardDescription
             CardBook.Cards = null;
+        }
+
+        void SaveImages(List<Bitmap> bitmaps, string name)
+        {
+            if (bitmaps.Count > 20)
+                throw new Exception("dont try to save more than 20 images");
+            var destBitmap = new Bitmap(1024, 786);
+            using (Graphics g = Graphics.FromImage(destBitmap)) { g.Clear(Color.White); }
+            var srcRegion = Rectangles[0];
+            for (var i = 0; i < bitmaps.Count; i++)
+            {
+                CopyRegionIntoImage(bitmaps[i], srcRegion, ref destBitmap, Rectangles[i]);
+            }
+            destBitmap.Save($"{name}.png");
+        }
+
+        void CopyRegionIntoImage(Bitmap srcBitmap, Rectangle srcRegion, ref Bitmap destBitmap, Rectangle destRegion)
+        {
+            using (Graphics grD = Graphics.FromImage(destBitmap))
+            {
+                grD.DrawImage(srcBitmap, destRegion, srcRegion, GraphicsUnit.Pixel);
+            }
         }
 
         /// <summary>
@@ -526,25 +565,6 @@ namespace Cards
             return distinctHoles;
         }
 
-        ///// <summary>
-        ///// get list of all possible holes of given window
-        ///// </summary>
-        ///// <param name="window"></param>
-        ///// <returns></returns>
-        //private bool[][][] GenerateHoles2(bool[][] window)
-        //{
-        //    var bools = new[] { true, false };
-        //    var distinctHoles = new bool[][][] { window };
-        //    foreach (var b in bools)
-        //    {
-        //        for (var i = 0; i <= 3; i++)
-        //        {
-        //            AddDistinctHoles2(distinctHoles, HolesRotate(window, i, b));
-        //        }
-        //    }
-
-        //    return distinctHoles;
-        //}
 
         /// <summary>
         /// Add Distinct Holes to the holesList
@@ -561,21 +581,6 @@ namespace Cards
             holesList.Add(newHoles);
         }
 
-        /// <summary>
-        /// Add Distinct Holes to the holesList
-        /// </summary>
-        /// <param name="holesList"></param>
-        /// <param name="newHoles"></param>
-        private void AddDistinctHoles2(bool[][][] holesList, bool[][] newHoles)
-        {
-            if (holesList.Select(h => HolesAreSame2(h, newHoles)).Any(same => same))
-            {
-                return;
-            }
-            Array.Resize(ref holesList, holesList.Length + 1);
-            holesList[holesList.Length] = newHoles;
-        }
- 
 
         private static bool[,] CopyHoles(bool[,] holes, bool flip)
         {
@@ -594,26 +599,7 @@ namespace Cards
             return newHoles;
         }
 
-        private static bool HolesAreSame2(bool[][] holes1, bool[][] holes2)
-        {
-            try
-            {
-                for (var i = 0; i < holes1.Length; i++) 
-                {
-                    for (var j = 0; j < holes1[i].Length; j++)
-                    {
-                        if (holes1[i][j] != holes2[i][j])
-                            return false;
-                    }
-                }
-            }
-            catch
-            {
-                return false;
-            }
-            return true;
-        }
-
+       
         private static bool HolesAreSame(bool[,] holes1, bool[,] holes2)
         {
             if(holes1.Rank!=holes2.Rank || holes1.Length!=holes2.Length)
@@ -648,27 +634,7 @@ namespace Cards
 
             return rotetedHoles;
         }
-
-        //private static bool[][] HolesRotate2(bool[][] holes, int rotateCount, bool flip)
-        //{
-        //    var rotetedHoles = new bool[3][];
-        //    var copiedHoles = CopyHoles(holes, flip);
-        //    for (var i = 0; i <= rotateCount; i++)
-        //    {
-        //        for (var y = 0; y < rotetedHoles.GetLength(0); y++)
-        //        {
-        //            for (var x = 0; x < rotetedHoles.GetLength(1); x++)
-        //            {
-        //                rotetedHoles[y, x] = copiedHoles[x, 2 - y];
-        //            }
-        //        }
-
-        //        copiedHoles = CopyHoles(rotetedHoles, false);
-        //    }
-
-        //    return rotetedHoles;
-        //}
-
+         
         private JsonSerializerSettings JsonSerializerSettingsIgnoringNulls
         {
             get
@@ -683,13 +649,5 @@ namespace Cards
                 return DefaultJsonSerializerSettings;
             }
         }
-    }
-
-    public class CardDescription
-    {
-        public string ColorList { get; set; }
-        public int Id { get; set; }
-        public int Variations { get; set; }
-        public ulong Level { get; set; }
     }
 }
