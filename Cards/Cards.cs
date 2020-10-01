@@ -1,8 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -17,6 +20,7 @@ namespace Cards
         private JsonSerializerSettings DefaultJsonSerializerSettings { get; set; }
         private CardBook CardBook { get; set; }
         private Dictionary<int, bool[,]> Locations = new Dictionary<int, bool[,]>();
+        private Dictionary<int, int> ReverseImageIndex = new Dictionary<int, int>();
         Font MyFont = new Font("Microsoft Sans Serif", 11);
         private int Dia = 36;
         private int Width = 256;
@@ -25,15 +29,24 @@ namespace Cards
         // ReSharper disable once CollectionNeverQueried.Local
         private List<Card4s> Card4S { get; set; }
 
+        private string CardToStr(Card4 cv, int i)
+        {
+            return $"{cv.Windows[i].InsertBlockID}:{cv.Windows[i].InsertBlockPattern}={cv.Windows[i].OpenedColors}";
+        }
+
         private void Tocsv()
         {
-            //var fo = $"{args[0]}.csv";
-            //using (var writer = new StreamWriter(fo))
-            //using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            //{
-            //    csv.WriteRecords(oo);
-            //}
-            //Console.WriteLine($"{fo} is saved");
+            var header = "ID\tGroupID\tLevel\tVariation\tColorList\tBlock1\tBlock2\tBlock3\tBlock4";
+            var sw = new StreamWriter("Cards.csv");
+            sw.WriteLine(header);
+            foreach (var cg in CardBook.ColorGroups)
+            {
+                var variation = 1;
+                foreach (var cv in cg.VariationsOfSameColors)
+                {
+                    sw.WriteLine($"{cv.ID}\t{cg.GroupID}\t{cg.Level}\t{variation++}\t{cg.ColorCode}\t{CardToStr(cv, 0)}\t{CardToStr(cv, 1)}\t{CardToStr(cv, 2)}\t{CardToStr(cv, 3)}");
+                };
+            }
         }
 
         /// <summary>
@@ -94,9 +107,11 @@ namespace Cards
             {
                 for (var c = 0; c < 4; c++)
                 {
+                    ReverseImageIndex.Add(j, 3 - c + r * 4);
                     Rectangles[j++] = new Rectangle(c * Width, r * Height, Width, Height);
                 }
             }
+
 
             for (var count = 0; count < 10; count++)
             {
@@ -248,12 +263,15 @@ namespace Cards
             CardBook.ColorGroups = CardsToGroups(gg);
             Card4S = new List<Card4s>();
 
-            var images = new List<Bitmap>();
-            var fromm = 1;
-            var too = 0;
+            Tocsv();
+ 
+
+            var images1 = new List<Bitmap>();
+            var images2 = new List<Bitmap>();
+            var page = 1;
+            var odd = true;
             foreach (var cg in CardBook.ColorGroups)
             {
-                too++;
                 var cardDescription = new CardDescription()
                 {
                     ColorList = cg.ColorCode,
@@ -261,12 +279,20 @@ namespace Cards
                     Level = cg.Level,
                     Variations = cg.VariationsOfSameColors.Count
                 };
-                images.Add(GetBitmap(cardDescription));
-                if (images.Count >= 20)
+                if (odd)
+                    images1.Add(GetBitmap(cardDescription));
+                else
+                    images2.Add(GetBitmap(cardDescription));
+                odd = !odd;
+                if (images1.Count >= 20)
                 {
-                    SaveImages(images, $"{fromm}_to_{too}");
-                    fromm = too + 1;
-                    images = new List<Bitmap>();
+                    SaveImages(images1, $"A_{page:D2}");
+                    images1 = new List<Bitmap>();
+                }
+                if (images2.Count >= 20)
+                {
+                    SaveImages(images2, $"B_{page++:D2}", true);
+                    images2 = new List<Bitmap>();
                 }
                 foreach (var c in cg.VariationsOfSameColors)
                 {
@@ -281,14 +307,18 @@ namespace Cards
                     });
                 }
             }
-            if (images.Count > 0)
+            if (images1.Count > 0)
             {
-                SaveImages(images, $"{fromm}_to_{too}");
+                SaveImages(images1, $"A_{page:D2}");
+            }
+            if (images2.Count > 0)
+            {
+                SaveImages(images2, $"B_{page++:D2}", true);
             }
             CardBook.Cards = null;
         }
 
-        void SaveImages(List<Bitmap> bitmaps, string name)
+        void SaveImages(List<Bitmap> bitmaps, string name, bool reverse = false)
         {
             if (bitmaps.Count > 20)
                 throw new Exception("dont try to save more than 20 images");
@@ -297,7 +327,13 @@ namespace Cards
             var srcRegion = Rectangles[0];
             for (var i = 0; i < bitmaps.Count; i++)
             {
-                CopyRegionIntoImage(bitmaps[i], srcRegion, ref destBitmap, Rectangles[i]);
+                var destRecIndex = i;
+                if (reverse)
+                {
+                    destRecIndex = ReverseImageIndex[i];
+                }
+                    
+                CopyRegionIntoImage(bitmaps[i], srcRegion, ref destBitmap, Rectangles[destRecIndex]);
             }
             destBitmap.Save($"{name}.png");
         }
