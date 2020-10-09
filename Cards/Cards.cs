@@ -1,11 +1,8 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -61,7 +58,7 @@ namespace Cards
             _backgroundColorsFileName = args.FirstOrDefault(x => x.ToLower().Contains("color"));
         }
 
-       
+
         /// <summary>
         /// Cards execution
         /// </summary>
@@ -99,7 +96,7 @@ namespace Cards
             //var cs = CardBook.ColorGroups.SelectMany(x => x.VariationsOfSameColors.Where(y => y.ID == 12)).FirstOrDefault();
         }
 
-      
+
         private void PopLocations()
         {
             var j = 0;
@@ -111,44 +108,18 @@ namespace Cards
                     Rectangles[j++] = new Rectangle(c * Width, r * Height, Width, Height);
                 }
             }
-
-
-            for (var count = 0; count < 10; count++)
-            {
-                var bb = new bool[,]
-                {
-                { false, false, false },
-                { false, false, false },
-                { false, false, false }
-                };
-                for (var i = 0; i < count; i++)
-                {
-                    if (i == 0)
-                        bb[0, 0] = true;
-                    else if (i == 1)
-                        bb[0, 2] = true;
-                    else if (i == 2)
-                        bb[2, 0] = true;
-                    else if (i == 3)
-                        bb[2, 2] = true;
-                    else if (i == 4)
-                        bb[0, 1] = true;
-                    else if (i == 5)
-                        bb[2, 1] = true;
-                    else if (i == 6)
-                        bb[1, 0] = true;
-                    else if (i == 7)
-                        bb[1, 2] = true;
-                    else if (i == 8)
-                        bb[1, 1] = true;
-                }
-                Locations.Add(count, bb);
-            }
+            Locations.Add(3, new bool[,] { { false, false, true }, { false, true, false }, { true, false, false } });
+            Locations.Add(4, new bool[,] { { true, false, true }, { false, false, false }, { true, false, true } });
+            Locations.Add(5, new bool[,] { { true, false, true }, { false, true, false }, { true, false, true } });
+            Locations.Add(6, new bool[,] { { true, false, true }, { true, false, true }, { true, false, true } });
+            Locations.Add(7, new bool[,] { { true, true, true }, { false, true, false }, { true, true, true } });
+            Locations.Add(8, new bool[,] { { true, true, true }, { true, false, true }, { true, true, true } });
+            Locations.Add(9, new bool[,] { { true, true, true }, { true, true, true }, { true, true, true } });
         }
 
-        Bitmap GetBitmap(CardDescription cardDescription)
-        {
-            var cc = cardDescription.ColorList.Split(',').Select(x => Color.FromName(x)).ToList();
+        Bitmap GetBitmap(string colorList, string text)
+        { 
+            var cc = colorList.Split(',').Select(x => Color.FromName(x)).ToList();
             var bmp = new Bitmap(Width, Height, PixelFormat.Format24bppRgb);
             var g = Graphics.FromImage(bmp);
             g.Clear(Color.White);
@@ -171,11 +142,16 @@ namespace Cards
                 }
             }
             var brr = new SolidBrush(Color.Black);
-            var text = $"ID:{cardDescription.Id}, Level:{cardDescription.Level}, Variations:{cardDescription.Variations}";
             g.DrawString(text, MyFont, brr, 25, 130);
             return bmp;
         }
- 
+
+        Bitmap GetBitmap(CardDescription cardDescription)
+        {
+            var text = $"ID:{cardDescription.Id}, Level:{cardDescription.Level}, Variations:{cardDescription.Variations}";
+            return GetBitmap(cardDescription.ColorList, text);
+        }
+
         private void CardBookPrint()
         {
             var cardBookJson = JsonConvert.SerializeObject(CardBook, JsonSerializerSettingsIgnoringNulls);
@@ -218,9 +194,81 @@ namespace Cards
             return cardGroups;
         }
 
+        private void Print48()
+        {
+            var kolors48 = new List<string>()
+            {
+                "Yellow,Yellow,Yellow,Yellow,Yellow",//1
+                "Green,Green,Green,Green,Green",
+                "Blue,Blue,Blue,Blue",
+                "Red,Red,Red,Red,White,White,White",
+                "Green,Green,Green,Green,Green,Green,Blue",
+                "Blue,Blue,Blue,White,White,White",
+                "Blue,Blue,Blue,White,White,White,White",
+                "Blue,Blue,Blue,Red",
+                "Blue,Blue,Blue,Blue,Yellow,Yellow,Yellow",
+                "Green,Green,White,White,White",//10
+                "Green,Green,Blue",
+                "Green,Green,Green,Blue,Blue,Blue,Blue",
+                "Green,Green,Green,Yellow",
+                "Blue,Blue,Yellow,Yellow",
+                "Yellow,Yellow,White,White,White,White,White",
+                "White,Red,Red,Green",
+                "Blue,Blue,Blue,White,White,Yellow,Yellow,Green,Green",
+                "Green,Yellow,White",
+                "Yellow,Yellow,Red,Red,Red,Red,Red",
+                "Green,Red,Blue",//20
+                "Yellow,Yellow,Yellow,Red,Red,White,Blue,Blue,Blue",
+                "White,Red,Yellow",
+                "Green,Red,Blue,Blue,Blue,Blue",
+                "White,White,Yellow,Green",
+                "Green,Green,Green,Green,Yellow,Blue",
+                "Blue,Blue,Blue,Red,White,Blue",
+                "Red,Red,Red,Green,White,White,White",
+                "Red,Yellow,Yellow,Yellow,Yellow,Blue,Blue,Blue",
+                "Yellow,Yellow,Yellow,White,White,White,Blue,Blue",
+                "Yellow,White,White,Blue,Blue,Blue",//30
+                "Yellow,White,White,Yellow,Green",
+                "White,White,White,Blue,Blue,Blue,Green",
+                "Yellow,Red,Red,Green",
+                "White,White,White,White,Blue,Blue,Red,Red",
+                "White,White,White,Yellow,Blue,Blue,Blue,Yellow",
+                "White,White,Red,Yellow,Red",
+                "White,White,White,Yellow,Yellow,Blue,Green,Red,Red",
+                "Yellow,Yellow,Yellow,Yellow,Green,Red",// 38
+                "Yellow,Yellow,Yellow,White,White,Green,Green",
+                "Blue,White,White,White,Green,Green",//40
+                "Yellow,Yellow,Yellow,Yellow,Blue,Blue,Green",
+                "Red,Red,Red,Yellow,Red,Green",
+                "Yellow,Yellow,Yellow,Yellow,Red,Green,Green",
+                "Blue,Blue,Blue,Red,Red,Red,White",
+                "Yellow,Yellow,Blue,Blue,Red,Red,Green,Green",
+                "Blue,Blue,Blue,Blue,Red,Yellow,White",
+                "Blue,Blue,Blue,Red,Red,Yellow,Yellow",
+                "Yellow,Yellow,Yellow,Blue,Red,White,Green,Green",
+            };
+            var page = 1;
+            var images = new List<Bitmap>();
+            for (var i = 0; i < kolors48.Count; i++)
+            {
+                var image = GetBitmap(kolors48[i], (i + 1).ToString());
+                images.Add(image);
+                if (images.Count >= 20)
+                {
+                    SaveImages(images, $"48s_{page++:D2}");
+                    images = new List<Bitmap>();
+                }
+            }
+            if (images.Count > 0)
+            {
+                SaveImages(images, $"48s_{page++:D2}");
+            }
+        }
+
         private void CardBookGroupAndOrder()
         {
             PopLocations();
+            Print48();
             CardBook.Cards = CardBook.Cards.OrderBy(x => x.Level).ToList();
             ulong previousLevel = 1;
             var previousVariation = 0;
@@ -267,6 +315,7 @@ namespace Cards
  
 
             var images1 = new List<Bitmap>();
+            var images48 = new List<Bitmap>();
             var images2 = new List<Bitmap>();
             var page = 1;
             var odd = true;
