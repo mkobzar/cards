@@ -372,15 +372,6 @@ namespace Cards
             CardBook.Cards = null;
         }
 
-
-
-        void SaveImage(Bitmap bitmap, string name)
-        {
-
-            using (Graphics g = Graphics.FromImage(bitmap)) { g.Clear(Color.White); }
-
-        }
-
         void SaveImages(List<Bitmap> bitmaps, string name, bool reverse = false)
         {
             if (bitmaps.Count > 20)
