@@ -19,6 +19,7 @@ namespace Cards
         private Dictionary<int, bool[,]> Locations = new Dictionary<int, bool[,]>();
         private Dictionary<int, int> ReverseImageIndex = new Dictionary<int, int>();
         Font MyFont = new Font("Microsoft Sans Serif", 11);
+        //Font MyFont = new Font("Microsoft Sans Serif", 24);
         private int Dia = 36;
         private int Width = 256;
         private int Height = 157;
@@ -143,6 +144,7 @@ namespace Cards
             }
             var brr = new SolidBrush(Color.Black);
             g.DrawString(text, MyFont, brr, 25, 130);
+            // g.DrawString(text, MyFont, brr, 67, 27);
             return bmp;
         }
 
@@ -328,10 +330,13 @@ namespace Cards
                     Level = cg.Level,
                     Variations = cg.VariationsOfSameColors.Count
                 };
+                var bmp = GetBitmap(cardDescription);
+                bmp.Save($"{cardDescription.Id:D4}.png");
+
                 if (odd)
-                    images1.Add(GetBitmap(cardDescription));
+                    images1.Add(bmp);
                 else
-                    images2.Add(GetBitmap(cardDescription));
+                    images2.Add(bmp);
                 odd = !odd;
                 if (images1.Count >= 20)
                 {
@@ -365,6 +370,15 @@ namespace Cards
                 SaveImages(images2, $"B_{page++:D2}", true);
             }
             CardBook.Cards = null;
+        }
+
+
+
+        void SaveImage(Bitmap bitmap, string name)
+        {
+
+            using (Graphics g = Graphics.FromImage(bitmap)) { g.Clear(Color.White); }
+
         }
 
         void SaveImages(List<Bitmap> bitmaps, string name, bool reverse = false)
