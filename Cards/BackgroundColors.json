@@ -20,3 +20,27 @@
     [ "Green", "Yellow", "Red" ]
   ]
 ]
+
+
+//[
+//  [
+//    "Yellow,None,Blue",
+//    "Red,Green,Red",
+//    "White,Blue,Yellow"
+//  ],
+//  [
+//    "Green,None,Blue",
+//    "None,Red,Yellow",
+//    "Blue,White,Green"
+//  ],
+//  [
+//    "White,Yellow,Red",
+//    "Green,None,Green",
+//    "Blue,None,White"
+//  ],
+//  [
+//    "None,None,None",
+//    "None,White,Blue",
+//    "Green,Yellow,Red"
+//  ]
+//]
